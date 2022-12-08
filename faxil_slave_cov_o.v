@@ -172,7 +172,7 @@ module faxil_slave #(
 	// Setup
 	//
 
-	/*initial	f_past_valid = 1'b0;
+	initial	f_past_valid = 1'b0;
 	always @(posedge i_clk)
 		f_past_valid <= 1'b1;
 
@@ -255,20 +255,20 @@ module faxil_slave #(
 	// 	//
 	// 	`SLAVE_ASSERT(!i_axi_bvalid);
 	// 	`SLAVE_ASSERT(!i_axi_rvalid);
-	// end*/
+	// end
 
 	property reset_valid;
-		@(posedge i_clk) $past(!i_axi_reset_n) |->  ((i_axi_arvalid == 0) && (i_axi_awvalid == 0) && (i_axi_wvalid == 0));
-		//!i_axi_arvalid;
+		@(posedge i_clk) !(i_axi_reset_n) |-> ##1 !i_axi_arvalid;
 		// (i_axi_arvalid == 0) && (i_axi_awvalid == 0) && (i_axi_wvalid == 0);
 	endproperty
 	property xv1_1;
-		@(posedge i_clk) $past(!i_axi_reset_n) |->  (i_axi_bvalid == 0 )&& (i_axi_rvalid == 0);
+		@(posedge i_clk) disable iff (!((!f_past_valid && F_OPT_INITIAL)||(f_past_valid && !$past(i_axi_reset_n,,,@i_clk))))
+		(i_axi_bvalid == 0 )&& (i_axi_rvalid == 0);
 	endproperty
-	assume_xv1_1: assume property (xv1_1) else $error("failed assumption xv1");
+	// assume_xv1: assume property (xv1) else $error("failed assumption xv1");
 	assert_reset_valid: assert property (reset_valid);
 
-/*	generate if (F_OPT_ASYNC_RESET)
+	generate if (F_OPT_ASYNC_RESET)
 	begin
 		always @(*)
 		if (!i_axi_reset_n)
@@ -294,10 +294,10 @@ module faxil_slave #(
 	*/
     
 	property test1;
-		@(posedge i_clk) disable iff (F_OPT_BRESP) ((i_axi_bvalid)&&(F_OPT_INITIAL || i_axi_reset_n))|->!(i_axi_bresp);
+		@(posedge i_clk) ((i_axi_bvalid)&&(!F_OPT_BRESP)&&(F_OPT_INITIAL || i_axi_reset_n))|->!(i_axi_bresp);
 	endproperty
 	property test2;
-		@(posedge i_clk) disable iff (F_OPT_RRESP)  ((i_axi_rvalid)&&(F_OPT_INITIAL || i_axi_reset_n))|->!(i_axi_rresp);
+		@(posedge i_clk) ((i_axi_rvalid)&&(!F_OPT_RRESP)&&(F_OPT_INITIAL || i_axi_reset_n))|->!(i_axi_rresp);
 	endproperty
 	property test3;
 		@(posedge i_clk) (i_axi_bvalid&&(F_OPT_INITIAL || i_axi_reset_n))|->!(i_axi_bresp==2'b01);
@@ -333,105 +333,126 @@ module faxil_slave #(
 
 	property a1_1;
 
-		@(posedge i_clk) disable iff (! i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_awvalid && !i_axi_awready)) |-> i_axi_awvalid;
+		(f_past_valid)&&($past(i_axi_awvalid && !i_axi_awready)) |-> i_axi_awvalid;
 
 	endproperty
 
 	property a1_2;
-		@(posedge i_clk) disable iff (!(i_axi_reset_n))
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_awvalid && !i_axi_awready)) |-> $stable(i_axi_awaddr);
+		(f_past_valid)&&($past(i_axi_awvalid && !i_axi_awready)) |-> $stable(i_axi_awaddr);
 
 	endproperty
 
 	property a1_3;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_awvalid && !i_axi_awready)) |-> $stable(i_axi_awprot);
+		(f_past_valid)&&($past(i_axi_awvalid && !i_axi_awready)) |-> $stable(i_axi_awprot);
 
 	endproperty
 
 	
-	//assume_a1_1: assume property (a1_1);
-	//assume_a1_2: assume property (a1_2);
-	//assume_a1_3: assume property (a1_3);
+	assume_a1_1: assume property (a1_1);
+	assume_a1_2: assume property (a1_2);
+	assume_a1_3: assume property (a1_3);
 	//-----------
 
 	property a2_1;
 
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_wvalid && !i_axi_wready)) |-> i_axi_wvalid;
+		(f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+				&&($past(i_axi_wvalid && !i_axi_wready)) |-> i_axi_wvalid;
 
 	endproperty
 
 	property a2_2;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_wvalid && !i_axi_wready)) |-> $stable(i_axi_wstrb);
+		(f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+				&&($past(i_axi_wvalid && !i_axi_wready)) |-> $stable(i_axi_wstrb);
 
 	endproperty
 
 	property a2_3;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_wvalid && !i_axi_wready)) |-> $stable(i_axi_wdata);
+		(f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+				&&($past(i_axi_wvalid && !i_axi_wready)) |-> $stable(i_axi_wdata);
 
 	endproperty
 		
-	//assume_a2_1: assume property (a2_1);
-	//assume_a2_2: assume property (a2_2);
-	//assume_a2_3: assume property (a2_3);
+	assume_a2_1: assume property (a2_1);
+	assume_a2_2: assume property (a2_2);
+	assume_a2_3: assume property (a2_3);
 // -----
 	property a3_1;
 
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_arvalid && !i_axi_arready)) |-> i_axi_arvalid;
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+		&&($past(i_axi_arvalid && !i_axi_arready))) |-> i_axi_arvalid;
 
 	endproperty
 
 	property a3_2;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		((i_axi_arvalid && !i_axi_arready)) |=> $stable(i_axi_araddr);
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+		&&($past(i_axi_arvalid && !i_axi_arready))) |-> $stable(i_axi_araddr);
 
 	endproperty
 
 	property a3_3;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_arvalid && !i_axi_arready)) |-> $stable(i_axi_arprot);
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+		&&($past(i_axi_arvalid && !i_axi_arready))) |-> $stable(i_axi_arprot);
 
 	endproperty
 
-	//assume_a3_1: assume property (a3_1);
-	//assume_a3_2: assume property (a3_2);
-	//assume_a3_3: assume property (a3_3);
+	assume_a3_1: assume property (a3_1);
+	assume_a3_2: assume property (a3_2);
+	assume_a3_3: assume property (a3_3);
 
 	//------
 
 	property a4_1;
- 
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
 
-		($past(i_axi_rvalid && !i_axi_rready)) |-> i_axi_rvalid;
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
+
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+			&&($past(i_axi_rvalid && !i_axi_rready))) |-> i_axi_rvalid;
 
 	endproperty
 
 	property a4_2;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_rvalid && !i_axi_rready)) |-> $stable(i_axi_rresp);
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+			&&($past(i_axi_rvalid && !i_axi_rready))) |-> $stable(i_axi_rresp);
 
 	endproperty
 
 	property a4_3;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_rvalid && !i_axi_rready)) |-> $stable(i_axi_rdata);
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+			&&($past(i_axi_rvalid && !i_axi_rready))) |-> $stable(i_axi_rdata);
 	endproperty
 
 	assert_a4_1: assert property (a4_1);
@@ -440,17 +461,20 @@ module faxil_slave #(
 	//------
 	
 	property a5_1;
-		@(posedge i_clk) disable iff (!i_axi_reset_n)
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
 
-		($past(i_axi_bvalid && !i_axi_bready)) |-> i_axi_bvalid;
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+		&&($past(i_axi_bvalid && !i_axi_bready))) |-> i_axi_bvalid;
 
 	endproperty
-	assert_bvalid : cover property (@(posedge i_clk) i_axi_bvalid);
-	assert_bready : cover property (@(posedge i_clk) i_axi_bready);
-	property a5_2;
-		@(posedge i_clk) disable iff (!	i_axi_reset_n)
 
-		($past(i_axi_bvalid && !i_axi_bready)) |-> $stable(i_axi_bresp);
+	property a5_2;
+		@(posedge i_clk) disable iff (!((f_past_valid)&&($past(i_axi_reset_n,,,@i_clk))
+		&&(!F_OPT_ASYNC_RESET || i_axi_reset_n)))
+
+		((f_past_valid && (!F_OPT_ASYNC_RESET || i_axi_reset_n))
+		&&($past(i_axi_bvalid && !i_axi_bready))) |-> $stable(i_axi_bresp);
 	endproperty
 
 	assert_a5_1: assert property (a5_1);

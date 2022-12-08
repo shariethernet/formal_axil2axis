@@ -14,6 +14,6 @@ clock S_AXI_ACLK
 reset ~S_AXI_ARESETN
 
 get_design_info
-
+set_prove_orchestration on
 prove -all
 report

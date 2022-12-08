@@ -620,21 +620,20 @@ module	axil2axis #(
 `ifdef	FORMAL
 	// Register definitions
 	// {{{
+	reg	f_past_valid;
+	initial	f_past_valid = 0;
+	always @(posedge S_AXI_ACLK)
+		f_past_valid <= 1;
 
 	// always @(*)
 	// if (!f_past_valid)
 	// 	assume(!S_AXI_ARESETN);
-	reg	f_past_valid;
-	//initial	f_past_valid = 0;
-	//always @(posedge S_AXI_ACLK)
-	//	f_past_valid <= 1;
-	assume_f_past_valid1: assume property (f_past_valid);
-	//assume_f_past_valid1: assume property (@(posedge S_AXI_ACLK) S_AXI_ARESETN |-> f_past_valid);
-	//property first_cyc_reset;
-	//	@(posedge S_AXI_ACLK) !S_AXI_ARESETN |=>  (S_AXI_ARESETN);
-	//endproperty
 
-	//assume_first_cyc_reset: assume property (first_cyc_reset);
+	property first_cyc_reset;
+		@(posedge S_AXI_ACLK) !f_past_valid |-> !S_AXI_ARESETN;
+	endproperty
+
+	assume_first_cyc_reset: assume property (first_cyc_reset);
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
